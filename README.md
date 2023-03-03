@@ -1,4 +1,4 @@
-# DPDK burst replay tool
+# C/U-Plane Attacker
 
 ## Introduction
 
