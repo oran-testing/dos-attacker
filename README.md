@@ -2,10 +2,7 @@
 
 ## Introduction
 
-The tool is designed to provide high DPDK performances to burst any pcap dump on
-a single or multiple NIC port(s).
-
-To do so, the pcap files will be cached on hugepages before being sent through DPDK.
+The tool is designed based on DPDK-burst-replay to conduct O-RAN.TIFG.E2E-Test.0-v03.00 Secton 7.2.2 C-Plane eCPRI DoS Attack (Network layer).
 
 ## How to play with it
 
@@ -19,32 +16,21 @@ NB: libpcap is not required, as dpdk-replay process pcap files manually.
 
 ### Compiling and installing it
 
-> autoreconf -i && ./configure [--enable-debug] && make && sudo make install
-
-OR:
-
-> RTE_SDK=<RTE_SDK_PATH> make -f DPDK_Makefile && sudo cp build/dpdk-replay /usr/bin
+> RTE_SDK= <DPDK_PATH>
+> export PCAP_DIR=<CUFH_ATTACKER_PATH>/Traffic
+> make -f DPDK_Makefile && sudo cp build/cufh-attacker /usr/bin
 
 ### Launching it
 
-> dpdk-replay [--nbruns NB] [--numacore 0|1] FILE NIC_ADDR[,NIC_ADDR...]
+> cufh-attacker [TRAFFIC-TYPE] [OPTIONS] PORT1[,PORTX...]
 
 Example:
-> dpdk-replay --nbruns 1000 --numacore 0 foobar.pcap 04:00.0,04:00.1,04:00.2,04:00.3
+> cufh-attacker --up-ul-r 1,10,1 --numacore 0 --dst 11:22:33:44:77:11 03:00.1
 
-## TODO
-
-* Add a configuration file or cmdline options for all code defines.
-* Add an option to configure maximum bitrate.
-* Add an option to send the pcap with the good pcap timers.
-* Add an option to send the pcap with a multiplicative speed (like, ten times the normal speed).
-* Add an option to select multiple pcap files at once.
-* Be able to send dumps simultaneously on both numacores.
-* Split big pkts into multiple mbufs.
-* Add a Python module to facilitate scripting (something like what does scapy for tcpreplay sendpfast func).
-* Manage systems with more than 2 numa cores.
-* Use the maximum NICs capabilities (Tx queues/descriptors).
 
 ## BSD LICENCE
 
 Copyright 2018 Jonathan Ribas, FraudBuster. All rights reserved.
+
+
+Modified 2023 by Ferlinda Feliana.

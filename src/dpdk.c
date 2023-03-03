@@ -72,7 +72,7 @@ char** fill_eal_args(const struct cmd_opts* opts, const struct cpus_bindings* cp
     /* Set EAL init parameters */
     snprintf(buf_coremask, 20, "0x%lx", cpus->coremask);
     char *pre_eal_args[] = {
-        "./dpdk-replay",
+        "./cufh_attacker",
         "-c", strdup(buf_coremask),
         "-n", "1", /* NUM MEM CHANNELS */
         "--proc-type", "auto",
@@ -212,7 +212,7 @@ int init_dpdk_eal_mempool(const struct cmd_opts* opts,
 
     printf("-> Create mempool of %lu mbufs of %lu octs.\n",
            dpdk->nb_mbuf, dpdk->mbuf_sz);
-    dpdk->pktmbuf_pool = rte_mempool_create("dpdk_replay_mempool",
+    dpdk->pktmbuf_pool = rte_mempool_create("cufh_attacker_mempool",
                                             dpdk->nb_mbuf,
                                             dpdk->mbuf_sz,
                                             MBUF_CACHE_SZ,
@@ -324,6 +324,11 @@ int tx_thread(void* thread_ctx)
              total_to_sent -= to_sent, to_sent = min(BURST_SZ, total_to_sent)) {
             /* calculate the mbuf index for the current batch */
             index = ctx->nb_pkt - total_to_sent;
+
+            /* ferlinda's addition here */
+            
+
+
 
             /* send the burst batch, and retry NB_RETRY_TX times if we */
             /* didn't success to sent all the wanted batch */

@@ -14,17 +14,39 @@
 
 #include "main.h"
 
+/* ADDITION */
+#include <time.h>
+
+#define TIME_TO_WAIT 0.05
+
+
 void usage(void)
 {
-    puts("dpdk-replay [OPTIONS] PCAP_FILE PORT1[,PORTX...]\n"
-         "PCAP_FILE: the file to send through the DPDK ports.\n"
+    puts(
+         "It is end user's responsibility to obey the applicable law.\n"
+         "This tool is made for educational purposes and based on https://github.com/FraudBuster/dpdk-burst-replay\n\n"
+         "cufh-attacker [TRAFFIC-TYPE] [OPTIONS] PORT1[,PORTX...]\n"
          "PORT1[,PORTX...] : specify the list of ports to be used (pci addresses).\n"
-         "Options:\n"
+         "Traffic-type <MBPS>:\n"
+         "--cp-dl-big: traffic type C-plane Downlink single repetitive packet 1582 bytes each (10/100/1000 Mbps only)\n"
+         "--cp-dl-small: traffic type C-plane Downlink single repetitive packet 64 bytes each (10/100/1000 Mbps only)\n"
+        "--cp-ul-big: traffic type C-plane Uplink (10/100/1000 Mbps only) single repetitive packet 1582 bytes each (10/100/1000 Mbps only)\n"
+        "--cp-ul-small: traffic type C-plane Uplink (10/100/1000 Mbps only) single repetitive packet 64 bytes each (10/100/1000 Mbps only)\n"
+         "--up-dl: traffic type U-plane Downlink (10/100/1000 Mbps only)\n"
+         "--up-ul: traffic type U-plane Uplink (10/100/1000 Mbps only)\n"      
+         "Traffic-type-r <START-SPEED, STOP-SPEED, INCREMENT>:\n"
+         "The traffic type is same as above, with addition of '-r' such as '--cp-dl-small' it will run from START-SPEED to STOP-SPEED\n" 
+         "with increasing speed of INCREMENT value. (if 1,10,1 is set then it will run 1 Mbps, 2 Mbps, 3 Mbps, ..., 10 Mbps) \n"  
+        "Options:\n"
+         "--c : send traffic continuously, not applicable to '-r'\n"
          "--numacore <NUMA-CORE> : use cores from the desired NUMA. Only\n"
          "  NICs on the selected numa core will be available (default is 0).\n"
-         "--nbruns <1-N> : set the wanted number of replay (1 by default).\n"
          "--wait-enter: will wait until you press ENTER to start the replay (asked\n"
-         "  once all the initialization are done)."
+         "  once all the initialization are done).\n"
+         "--dst <MAC-ADDRESS>: change to desired destination MAC-ADDRESS.\n"
+         "--src <MAC-ADDRESS>: change to desired source MAC-ADDRESS.\n"
+         "--vlan <VLAN>: change to desired VLAN.\n"
+         "PCAP_FILE: if not stated, set the file to send through the DPDK ports by file name."
          /* TODO: */
          /* "[--maxbitrate bitrate]|[--normalspeed] : bitrate not to be exceeded (default: no limit) in ko/s.\n" */
          /* "  specify --normalspeed to replay the trace with the good timings." */
@@ -85,21 +107,34 @@ char** str_to_pcicards_list(struct cmd_opts* opts, char* pcis)
 int parse_options(const int ac, char** av, struct cmd_opts* opts)
 {
     int i;
+    unsigned int j;
+    
+    // char* dir = getenv("PCAP_DIR");
+    // if (dir == NULL) {
+    //     printf("PCAP_DIR is not set\n");
+    //     return 1;
+    // }
+    // printf(dir);
+    // strcpy(opts->trace, dir);
+    
+    
 
     if (!av || !opts)
         return (EINVAL);
 
     /* if no trace or no pcicard is specified */
-    if (ac < 3)
+    if (ac < 2)
+        // printf("this error");
         return (ENOENT);
 
-    for (i = 1; i < ac - 2; i++) {
+    for (i = 1; i < ac - 1; i++) {
+        
         /* --numacore numacore */
         if (!strcmp(av[i], "--numacore")) {
             int nc;
 
             /* if no numa core is specified */
-            if (i + 1 >= ac - 2)
+            if (i + 1 >= ac - 1)
                 return (ENOENT);
 
             nc = atoi(av[i + 1]);
@@ -110,17 +145,316 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             continue;
         }
 
-        /* --nbruns nbruns */
-        if (!strcmp(av[i], "--nbruns")) {
+        /* ADDITION: change nbruns to volumetric tiers */
+
+        if (!strcmp(av[i], "--cp-dl-big")) {
+            strcat(opts->trace, "/cp_dl_10mb_big.pcap");
+            // strcpy(opts->trace, "cp_dl_10mb_big.pcap");
+            // opts->trace = "cp_dl_10mb_big.pcap";
             /* if no nb runs is specified */
-            if (i + 1 >= ac - 2)
+            if (i + 1 >= ac - 1)
                 return (ENOENT);
-            opts->nbruns = atoi(av[i + 1]);
-            if (opts->nbruns <= 0)
+            /* for each choosen volume */
+            if (!strcmp((av[i + 1]), "10")){
+                opts->nbruns = 1;
+            }
+            else if (!strcmp((av[i + 1]), "100")){
+                opts->nbruns = 10;
+            }
+            else if (!strcmp((av[i + 1]), "1000")){
+                /* It will have packet drop */
+                opts->nbruns = 100;
+            }
+            // Packet drop value = 105
+            /* else the value is wrong */
+            else{
                 return (EPROTO);
+            }
             i++;
             continue;
         }
+        else if (!strcmp(av[i], "--cp-dl-small")) {
+            strcat(opts->trace, "/cp_ul_10mb_small.pcap");
+            // opts->trace = "cp_ul_10mb_small.pcap";
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            /* for each choosen volume */
+            if (!strcmp((av[i + 1]), "10")){
+                opts->nbruns = 1;
+            }
+            else if (!strcmp((av[i + 1]), "100")){
+                opts->nbruns = 10;
+            }
+            else if (!strcmp((av[i + 1]), "1000")){
+                opts->nbruns = 100;
+            }
+            /* else the value is wrong */
+            else{
+                return (EPROTO);
+            }
+            i++;
+            continue;
+        }
+        else if (!strcmp(av[i], "--cp-ul-big")) {
+            strcat(opts->trace, "/cp_ul_10mb_big.pcap");
+            // opts->trace = "cp_ul_10mb_big.pcap";
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            /* for each choosen volume */
+            if (!strcmp((av[i + 1]), "10")){
+                opts->nbruns = 1;
+            }
+            else if (!strcmp((av[i + 1]), "100")){
+                opts->nbruns = 10;
+            }
+            else if (!strcmp((av[i + 1]), "1000")){
+                opts->nbruns = 100;
+            }
+            /* else the value is wrong */
+            else{
+                return (EPROTO);
+            }
+            i++;
+            continue;
+        }
+         else if (!strcmp(av[i], "--cp-ul-small")) {
+            strcat(opts->trace, "/cp_ul_10mb_small.pcap");
+            // opts->trace = "cp_ul_10mb_small.pcap";
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            /* for each choosen volume */
+            if (!strcmp((av[i + 1]), "10")){
+                opts->nbruns = 1;
+            }
+            else if (!strcmp((av[i + 1]), "100")){
+                opts->nbruns = 10;
+            }
+            else if (!strcmp((av[i + 1]), "1000")){
+                opts->nbruns = 100;
+            }
+            /* else the value is wrong */
+            else{
+                return (EPROTO);
+            }
+            i++;
+            continue;
+        }
+        else if (!strcmp(av[i], "--up-dl")) {
+            strcat(opts->trace, "/up_dl_10mb.pcap");
+            // opts->trace = "up_dl_10mb.pcap";
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            /* for each choosen volume */
+            if (!strcmp((av[i + 1]), "10")){
+                opts->nbruns = 1;
+            }
+            else if (!strcmp((av[i + 1]), "100")){
+                opts->nbruns = 10;
+            }
+            else if (!strcmp((av[i + 1]), "1000")){
+                /* It will have packet drop */
+                opts->nbruns = 100;
+            }
+            // Packet drop value = 110
+            /* else the value is wrong */
+            else{
+                return (EPROTO);
+            }
+            i++;
+            continue;
+        } 
+        else if (!strcmp(av[i], "--up-ul")) {
+            strcat(opts->trace, "/up_ul_10mb.pcap");
+            // opts->trace = "up_ul_10mb.pcap";
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            /* for each choosen volume */
+            if (!strcmp((av[i + 1]), "10")){
+                opts->nbruns = 1;
+            }
+            else if (!strcmp((av[i + 1]), "100")){
+                opts->nbruns = 10;
+            }
+            else if (!strcmp((av[i + 1]), "1000")){
+                opts->nbruns = 100;
+            }
+            // Packet drop value = 120
+            /* else the value is wrong */
+            else{
+                return (EPROTO);
+            }
+            i++;
+            continue;
+        } 
+
+        /* ADDITION: range-based */
+        else if (!strcmp(av[i], "--cp-dl-big-r")) {
+            strcat(opts->trace, "/cp_dl_1mb_big.pcap");
+            // opts->trace = "cp_dl_1mb_big.pcap";
+            opts->r_active = 1;
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            char* token = strtok((av[i + 1]), ",");
+            int j = 0;
+            while (token != NULL && j < 3) {
+                opts->range[j] = atoi(token);
+                token = strtok(NULL, ",");
+                j++;
+            }
+            i++;
+            continue;
+        } 
+        else if (!strcmp(av[i], "--cp-dl-small-r")) {
+            strcat(opts->trace, "/cp_ul_1mb_small.pcap");
+            // opts->trace = "cp_ul_1mb_small.pcap";
+            opts->r_active = 1;
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            char* token = strtok((av[i + 1]), ",");
+            int j = 0;
+            while (token != NULL && j < 3) {
+                opts->range[j] = atoi(token);
+                token = strtok(NULL, ",");
+                j++;
+            }
+            i++;
+            continue;
+        }
+        else if (!strcmp(av[i], "--cp-ul-big-r")) {
+            strcat(opts->trace, "/cp_ul_1mb_big.pcap");
+            // opts->trace = "cp_ul_1mb_big.pcap";
+            opts->r_active = 1;
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            char* token = strtok((av[i + 1]), ",");
+            int j = 0;
+            while (token != NULL && j < 3) {
+                opts->range[j] = atoi(token);
+                token = strtok(NULL, ",");
+                j++;
+            }
+            i++;
+            continue;
+        }
+         else if (!strcmp(av[i], "--cp-ul-small-r")) {
+            strcat(opts->trace, "/cp_ul_1mb_small.pcap");
+            // opts->trace = "cp_ul_1mb_small.pcap";
+            opts->r_active = 1;
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            char* token = strtok((av[i + 1]), ",");
+            int j = 0;
+            while (token != NULL && j < 3) {
+                opts->range[j] = atoi(token);
+                token = strtok(NULL, ",");
+                j++;
+            }
+            i++;
+            continue;
+        }
+        else if (!strcmp(av[i], "--up-dl-r")) {
+            strcat(opts->trace, "/up_dl_1mb.pcap");
+            // opts->trace = "up_dl_1mb.pcap";
+            opts->r_active = 1;
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            char* token = strtok((av[i + 1]), ",");
+            int j = 0;
+            while (token != NULL && j < 3) {
+                opts->range[j] = atoi(token);
+                token = strtok(NULL, ",");
+                j++;
+            }
+            i++;
+            continue;
+        } 
+        else if (!strcmp(av[i], "--up-ul-r")) {
+            strcat(opts->trace, "/up_ul_1mb.pcap");
+            // opts->trace = "up_ul_1mb.pcap";
+            opts->r_active = 1;
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            char* token = strtok((av[i + 1]), ",");
+            int j = 0;
+            while (token != NULL && j < 3) {
+                opts->range[j] = atoi(token);
+                token = strtok(NULL, ",");
+                j++;
+            }
+            i++;
+            continue;
+        } 
+
+        if (!strcmp(av[i], "--c")) {
+            opts->cont = 1;
+            continue;
+        }        
+
+        /* Edit fields */
+        if (!strcmp(av[i], "--dst")) {
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            opts->dst_mac = av[i + 1];
+            // printf(opts->dst_mac);
+            i++;
+            continue;
+        }
+        
+        if (!strcmp(av[i], "--src")) {
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            opts->src_mac = av[i + 1];
+            // printf(opts->src_mac);
+            i++;
+            continue;
+        }
+        
+        if (!strcmp(av[i], "--vlan")) {
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            opts->vlan = av[i + 1];
+            // printf(opts->vlan);
+            i++;
+            continue;
+        }
+
+        // /* --nbruns nbruns */
+        // if (!strcmp(av[i], "--vol")) {
+        //     /* if no nb runs is specified */
+        //     if (i + 1 >= ac - 2)
+        //         return (ENOENT);
+        //     /* for each choosen volume */
+        //     if (!strcmp((av[i + 1]), "10")){
+        //         opts->nbruns = 122;
+        //     }
+        //     else if (!strcmp((av[i + 1]), "100")){
+        //         opts->nbruns = 10;
+        //     }
+        //     else if (!strcmp((av[i + 1]), "1000")){
+        //         opts->nbruns = 100;
+        //     }
+        //     /* else the value is wrong */
+        //     else{
+        //         return (EPROTO);
+        //     }
+        //     // /* opts->nbruns = atoi(av[i + 1]); */
+        //     // opts->nbruns = 1;
+        //     // if (opts->nbruns <= 0)
+        //     //     return (EPROTO);
+        //     i++;
+        //     continue;
+        // }
 
         /* --wait-enter */
         if (!strcmp(av[i], "--wait-enter")) {
@@ -130,10 +464,29 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
 
         break;
     }
-    if (i + 2 > ac)
+    if (i + 1 > ac)
         return (EPROTO);
-    opts->trace = av[i];
-    opts->pcicards = str_to_pcicards_list(opts, av[i + 1]);
+    
+    /* ADDITION: change file name parsing into data type to PCAP parsing */
+
+    // if (!strcmp(av[i], "--cp-dl")) {
+    //     opts->trace = "0919_attack3.pcap";
+    // }
+    // else if (!strcmp(av[i], "--cp-ul")) {
+    //     opts->trace = "du_cp_ul.pcap";
+    // }
+    // else if (!strcmp(av[i], "--up-dl")) {
+    //     opts->trace = "du_cp_ul.pcap";
+    // }
+    // /* or user can input their own PCAP */
+    // else{
+    //     opts->trace = av[i];
+    // }
+
+    // opts->trace = av[i];
+
+
+    opts->pcicards = str_to_pcicards_list(opts, av[i]);
     return (0);
 }
 
@@ -214,6 +567,8 @@ int main(const int ac, char** av)
     struct dpdk_ctx         dpdk;
     struct pcap_ctx         pcap;
     int                     ret;
+    /* ADDITION */
+    unsigned int i,sent;
 
     /* set default opts */
     bzero(&cpus, sizeof(cpus));
@@ -221,7 +576,44 @@ int main(const int ac, char** av)
     bzero(&dpdk, sizeof(dpdk));
     bzero(&pcap, sizeof(pcap));
     opts.nbruns = 1;
+    /* ADDITION */
+    opts.src_mac = "a";
+    opts.dst_mac = "a";
+    opts.vlan = "a";
 
+    time_t current_time;
+    char* time_string;
+
+    char* command = "echo $PCAP_DIR";
+    char output[1024];
+
+    FILE* fp = popen(command, "r");
+    if (fp == NULL) {
+        printf("PCAP_DIR not set\n");
+        return 1;
+    }
+    fgets(output, 1024, fp);
+    pclose(fp);
+
+    // Remove trailing newline if present
+    size_t len = strlen(output);
+    if (output[len-1] == '\n') {
+        output[len-1] = '\0';
+    }
+
+    // printf("Output: %s\n", output);
+    opts.trace=output;
+
+    
+
+    // if (getenv("PCAP_DIR") == NULL) {
+    //     printf("PCAP_DIR is not set\n");
+    //     return 1;
+    // }
+    // printf(getenv("PCAP_DIR"));
+
+    // strcpy(opts.trace, getenv("PCAP_DIR"));
+    // printf(opts.trace);
     /* parse cmdline options */
     ret = parse_options(ac, av, &opts);
     if (ret) {
@@ -269,10 +661,102 @@ int main(const int ac, char** av)
     if (ret)
         goto mainExit;
 
-    /* start tx threads and wait to start to send pkts */
-    ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
-    if (ret)
-        goto mainExit;
+    if(opts.cont){
+        if(opts.r_active){
+            return (ENOENT);
+        }
+         /* start tx threads and wait to start to send pkts */
+        clock_t last = clock();
+        while(1){
+            clock_t current = clock();
+            if (current >= (last + TIME_TO_WAIT * CLOCKS_PER_SEC)) {
+                current_time = time(NULL);
+                time_string = ctime(&current_time);
+                printf("The current time is: %s", time_string);
+                
+                ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
+              
+                if (ret)
+                    goto mainExit; 
+                last = current;
+            }
+            // ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
+            // if (ret)
+            //     goto mainExit;  
+        }     
+    }
+    else if(opts.r_active){
+        clock_t last = clock();
+        for (i = opts.range[0]; i < (opts.range[1]) + 1; i+=opts.range[2]){
+            opts.nbruns = i;
+            sent=0;
+            while(1){
+                clock_t current = clock();
+                if (current >= (last + TIME_TO_WAIT * CLOCKS_PER_SEC)) {
+                    current_time = time(NULL);
+                    time_string = ctime(&current_time);
+                    printf("The current time is: %s", time_string);
+                    
+                    ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
+                    sent=1;
+
+                    if (ret)
+                        goto mainExit; 
+                    last = current;
+                    break;
+                }
+                // if (sent==1){
+                //     // sent=0;
+                //     break;
+                // }                
+                
+            // printf("here");
+            // clock_t current = clock();
+            // if (current >= (last + TIME_TO_WAIT * CLOCKS_PER_SEC)) {
+            //     // current_time = time(NULL);
+            //     // time_string = ctime(&current_time);
+            //     // printf("The current time is: %s", time_string);
+            //     // printf("here");
+            //     opts.nbruns = i;
+            //     ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
+            //     if (ret)
+            //         goto mainExit; 
+            //     last = current;
+            // }
+            }
+        }      
+    }
+    // else if(opts.r_active){
+    //     clock_t last = clock();
+    //     for (i = opts.range[0]; i < (opts.range[1]) + 1; i+=opts.range[2]){
+    //         clock_t current = clock();
+    //         if (current >= (last + TIME_TO_WAIT * CLOCKS_PER_SEC)) {
+    //             opts.nbruns = i;
+    //             /* start tx threads and wait to start to send pkts */
+    //             // printf("The current time is: %s\n", __TIME__);
+    //             ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
+    //             if (ret)
+    //                 goto mainExit;
+    //             last = current;
+    //         }
+    //     }        
+    // }
+
+
+    else{
+        ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
+        if (ret)
+            goto mainExit;
+    }
+
+    // /* MODIFIED: increasing Bps */
+    // for (i = 1; i < 101; i++){
+    //     opts.nbruns = i;
+    //     /* start tx threads and wait to start to send pkts */
+    //     ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
+    //     if (ret)
+    //         goto mainExit;
+    // }
 
 mainExit:
     /* cleanup */

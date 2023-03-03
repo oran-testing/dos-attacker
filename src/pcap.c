@@ -65,9 +65,11 @@ int check_pcap_hdr(const int fd)
     return (0);
 }
 
+/* ADDITION: 3 last function params */
+
 int add_pkt_to_cache(const struct dpdk_ctx* dpdk, const int cache_index,
                      const unsigned char* pkt_buf, const size_t pkt_sz,
-                     const unsigned int cpt, const int nbruns)
+                     const unsigned int cpt, const int nbruns, char* src_mac, char* dst_mac, char* vlan)
 {
     struct rte_mbuf* m;
 
@@ -84,6 +86,60 @@ int add_pkt_to_cache(const struct dpdk_ctx* dpdk, const int cache_index,
     m->data_len = m->pkt_len = pkt_sz;
     m->nb_segs = 1;
     m->next = NULL;
+
+    // unsigned char* pkt_data = rte_pktmbuf_mtod(m, unsigned char*);
+    // printf("Destination MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+    // pkt_data[0], pkt_data[1], pkt_data[2], pkt_data[3], pkt_data[4], pkt_data[5]);
+    // printf("Source MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+    // pkt_data[6], pkt_data[7], pkt_data[8], pkt_data[9], pkt_data[10], pkt_data[11]);
+    // printf("VLAN: %02x\n", pkt_data[15]);
+
+
+    /* ADDITION: change mac address and vlan */
+    if (strcmp(src_mac, "a")) {
+        unsigned char new_src_mac[6];
+        sscanf(src_mac, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+       &new_src_mac[0], &new_src_mac[1], &new_src_mac[2],
+       &new_src_mac[3], &new_src_mac[4], &new_src_mac[5]);
+       rte_memcpy((char*)m->buf_addr + 6, new_src_mac, 6);
+    }
+    if (strcmp(dst_mac, "a")) {
+        unsigned char new_dst_mac[6];
+        sscanf(dst_mac, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+       &new_dst_mac[0], &new_dst_mac[1], &new_dst_mac[2],
+       &new_dst_mac[3], &new_dst_mac[4], &new_dst_mac[5]);
+       rte_memcpy((char*)m->buf_addr, new_dst_mac, 6);
+    }
+    if (strcmp(vlan, "a")) {
+        // uint16_t vlan_id = htons(atoi(vlan));
+        uint16_t vlan_id = atoi(vlan);
+        unsigned char vlan_tag[2];
+        vlan_tag[0] = (vlan_id >> 8) & 0xFF;
+        vlan_tag[1] = vlan_id & 0xFF;
+        rte_memcpy((char*)m->buf_addr + 14, vlan_tag, 2);
+    }
+
+
+    /* ADDITION: change VLAN */
+    // unsigned char new_vlan[2] = {0x00, 0x05};
+    // rte_memcpy((char*)m->buf_addr + 14, new_vlan, 2);
+
+    /* ADDITION: print VLAN */
+    // unsigned char* pkt_data = rte_pktmbuf_mtod(m, unsigned char*);
+    // printf("VLAN: %02x\n", pkt_data[15]);
+
+    /* ADDITION: change MAC Address */
+    // unsigned char new_mac[6] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55};
+    // rte_memcpy((char*)m->buf_addr, new_mac, 6);
+
+    /* ADDITION: print MAC Address */
+    // pkt_data = rte_pktmbuf_mtod(m, unsigned char*);
+    // printf("Destination MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+    // pkt_data[0], pkt_data[1], pkt_data[2], pkt_data[3], pkt_data[4], pkt_data[5]);
+    // printf("Source MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+    // pkt_data[6], pkt_data[7], pkt_data[8], pkt_data[9], pkt_data[10], pkt_data[11]);
+    // printf("VLAN: %02x\n", pkt_data[15]);
+
 
     /* set the refcnt to the wanted number of runs, avoiding to free
        mbuf struct on first tx burst */
@@ -269,7 +325,7 @@ int load_pcap(const struct cmd_opts* opts, struct pcap_ctx* pcap,
 
         /* add packet to caches */
         for (i = 0; i < cpus->nb_needed_cpus; i++) {
-            ret = add_pkt_to_cache(dpdk, i, pkt_buf, nb_read, cpt, opts->nbruns);
+            ret = add_pkt_to_cache(dpdk, i, pkt_buf, nb_read, cpt, opts->nbruns, opts->src_mac, opts->dst_mac, opts->vlan);
             if (ret) {
                 fprintf(stderr, "\nadd_pkt_to_cache failed on pkt.\n");
                 goto load_pcapError;

@@ -45,6 +45,13 @@ struct cmd_opts {
     unsigned int    maxbitrate;
     int             wait;
     char*           trace;
+    /* ADDITION */
+    char*           src_mac;
+    char*           dst_mac;
+    char*           vlan;
+    int             cont;
+    int             range[3];
+    int             r_active;
 };
 
 /* struct to store the cpus context */

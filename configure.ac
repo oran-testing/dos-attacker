@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright 2018 Jonathan Ribas, FraudBuster. All rights reserved.
 
-AC_INIT([dpdk-burst-replay], 1.1.1)
+AC_INIT([cufh_attacker], 1.0.0)
 AC_PREREQ([2.59])
-AC_DEFINE_UNQUOTED([DPDK_REPLAY_VERSION_GIT], ["`git rev-parse HEAD`"], [current version])
+# AC_DEFINE_UNQUOTED([DPDK_REPLAY_VERSION_GIT], ["`git rev-parse HEAD`"], [current version])
 
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADER([config.h])
