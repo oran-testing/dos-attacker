@@ -1,7 +1,8 @@
 import random
+import math
+import argparse
 from scapy.all import *
 
-## Random MAC Generator
 def rand_mac():
     return "%02x:%02x:%02x:%02x:%02x:%02x" % (
         random.randint(0, 255),
@@ -12,78 +13,83 @@ def rand_mac():
         random.randint(0, 255)
         )
 
-def gen_pcap(packets, file_output, random_active, count):
-    if random_active:
+def count_mbps(packets,mbps):
+    p_length = 0
+    for packet in packets:
+        p_length+=len(packet)
+    nbruns = (mbps*1000000)/p_length
+    nbruns = math.ceil(nbruns)
+    return nbruns
+
+def modify_packet(packets, args):
+    for packet in packets:
+        packet.time = 0000000000.000000
+    if args.vlan != None:
         for packet in packets:
+            packet.vlan = args.vlan
+    
+    if args.src != None:
+        for packet in packets:
+            packet.src = args.src
+    
+    if args.dst != None:
+        for packet in packets:
+            packet.dst = args.dst   
+    return packets
+
+def generate_out_pcap(packets,args,nbruns):
+    for packet in packets:
+        if args.r:
             packet.src=rand_mac()
-            if packets.index(packet) == 0:
-                wrpcap(file_output,packet)
-            else:
-                wrpcap(file_output,packet,append=True,sync=True)
+        if packets.index(packet) == 0:
+            wrpcap(args.out,packet)
+        else:
+            wrpcap(args.out,packet,append=True)
 
-        ## Generation loop
-        for i in range (1,count):
-            for packet in packets:
-                packet.src=rand_mac()
-                wrpcap(file_output,packet,append=True,sync=True)
-    else:
+    ## Generation loop
+    for i in range (1,nbruns):
         for packet in packets:
-            if packets.index(packet) == 0:
-                wrpcap(file_output,packet)
-            else:
-                wrpcap(file_output,packet,append=True,sync=True)
+            if args.r:
+                packet.src=rand_mac()
+            wrpcap(args.out,packet,append=True)
+    
+    return 1
 
-        ## Generation loop
-        for i in range (1,count):
-            for packet in packets:
-                wrpcap(file_output,packet,append=True,sync=True) 
-
-    return 1    
 
 if __name__ == "__main__":
-    input_pcap =[]
-    input_frame_no = []
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pcap', type=str, required=True, 
+                        help='List of input pcap files and frame numbers to merge (e.g. file1.pcap:10,file2.pcap:20).')
+    parser.add_argument('--out', type=str, required=True, 
+                        help='Name of the output file. Example: merged.pcap')
+    parser.add_argument('--mbps', type=int, required=True, 
+                        help='Traffic volume of the output file in Mbps. Example: 100')
+    parser.add_argument('--vlan', type=int, required=False,
+                        help='Change VLAN of the frames. Example: 10')
+    parser.add_argument('--src', type=str, required=False,
+                        help='Change source MAC address of the frames.')
+    parser.add_argument('--dst', type=str, required=False,
+                        help='Change destination MAC address of the frames.')
+    parser.add_argument('--r', action='store_true', required=False,
+                        help='Randomize source MAC address of the frames')
+
+    args = parser.parse_args()
+
+    pcap_list, frame_no_list = zip(*[(s.split(":")[0], int(s.split(":")[1])) for s in args.pcap.split(",")])
+    pcap_list, frame_no_list = list(pcap_list), list(frame_no_list)
+
     packet_list = []
-    while True:
-        input_sum_packet = int(input("Number of packets   :" ))
-        for i in range(0, input_sum_packet):
-            input_pcap.append(str(input("File name      : ")))
-            input_frame_no.append(int(input("Frame number   : ")))
-            # packet_list.append(rdpcap(input_pcap)[input_frame_no])
-        
-        input_output_name = str(input("Output file name: "))
-        input_counter = int(input("Multiplication value: "))
 
-        input_vlan_flag = int(input("Input 1 for VLAN customization: "))
-        if input_vlan_flag:
-            input_vlan = int(input("New VLAN: "))
-        
-        print("MAC Address option (1) Follow packet (2) Customize (3) Random source MAC Address")
-        mac_opt=int(input("Choice:"))
+    for pcap in pcap_list:
+        packet_list.append(rdpcap(pcap)[frame_no_list[pcap_list.index(pcap)]])
 
-        if mac_opt==2:
-            input_src_mac=str(input("Source: "))
-            input_dst_mac=str(input("Destination: "))
-        elif mac_opt==3:
-            input_dst_mac=str(input("Destination: "))
-        elif mac_opt!=1:
-            print("Wrong option.")        
+    packet_list = modify_packet(packet_list, args)
 
-        for i in range(0, input_sum_packet):
-            print("Loading PCAP files...")
-            packet_list.append(rdpcap(input_pcap[i])[input_frame_no[i]])
-            packet_list[i].time = 0000000000.000000
-            if input_vlan_flag:
-                packet_list[i].vlan = input_vlan 
-            if mac_opt == 2:
-                packet_list[i].src = input_src_mac
-                packet_list[i].dst = input_dst_mac
-            elif mac_opt == 3:
-                packet_list[i].dst = input_dst_mac
-        
-        if mac_opt==3:
-            res=gen_pcap(packet_list,input_output_name,1,input_counter)
-        else:
-            res=gen_pcap(packet_list,input_output_name,0,input_counter)
+    nbruns = count_mbps(packet_list,args.mbps)
+    
+    res = generate_out_pcap(packet_list,args,nbruns)
 
-        break
+    if res:
+        print("Success.")
+    else:
+        print("Failed")
