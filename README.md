@@ -1,6 +1,6 @@
 # C/U-Plane Attacker
 
-## Packet Editor
+## 1. Packet Editor
 There are two parts of contribution for the packet editor:
 1. Dissector for O-RAN-FH-C packet Type-3 with extType-1 support and O-RAN-FH-U packet
 2. PCAP Generator to mix packets from several PCAP files into a single PCAP with support to set up destination MAC Adddress, set up source MAC Address, randomize source MAC Address, and set up VLAN
@@ -11,7 +11,14 @@ There are two parts of contribution for the packet editor:
 
 * Scapy
 
-#### Generate binary
+#### Adding dissector to Scapy
+
+> cp /Traffic/oran_fh.py [Scapy directory]/layers/
+
+After opening Scapy:
+> load_layer("oran_fh")
+
+#### Generate PCAP Generator binary 
 
 > pyinstaller /Traffic/pcap_gen.py --onefile --hiddenimport scapy
 > sudo cp dist/pcap_gen /usr/bin
@@ -23,7 +30,7 @@ There are two parts of contribution for the packet editor:
 Example: 
 > pcap_gen --pcap foobar1.pcap:3,foobar2.pcap:4 --out test.pcap --vlan 4 --dst 00:11:22:33:44:55 --src 00:11:22:33:44:66 --mbps 1
 
-## Packet Generator 
+## 2. Packet Generator 
 
 The tool is designed based on DPDK-burst-replay to conduct O-RAN.TIFG.E2E-Test.0-v03.00 Secton 7.2.2 C-Plane eCPRI DoS Attack (Network layer).
 
@@ -51,8 +58,8 @@ Example:
 > cufh-attacker --up-ul-r 1,10,1 --numacore 0 --dst 11:22:33:44:77:11 03:00.1
 
 
-<!-- ### BSD LICENCE
+### BSD LICENCE [DPDK-burst-replay]
 
 Copyright 2018 Jonathan Ribas, FraudBuster. All rights reserved.
 
-Modified 2023 by Ferlinda Feliana. -->
+Modified 2023 by Ferlinda Feliana.
