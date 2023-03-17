@@ -16,7 +16,7 @@ def rand_mac():
 def count_mbps(packets,mbps):
     p_length = 0
     for packet in packets:
-        p_length+=len(packet)
+        p_length+=(len(packet)*8)
     nbruns = (mbps*1000000)/p_length
     nbruns = math.ceil(nbruns)
     return nbruns
