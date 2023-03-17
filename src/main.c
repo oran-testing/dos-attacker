@@ -17,7 +17,7 @@
 /* ADDITION */
 #include <time.h>
 
-#define TIME_TO_WAIT 0.05
+#define TIME_TO_WAIT 1
 
 
 void usage(void)
@@ -174,7 +174,7 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             continue;
         }
         else if (!strcmp(av[i], "--cp-dl-small")) {
-            strcat(opts->trace, "/cp_ul_10mb_small.pcap");
+            strcat(opts->trace, "/cp_dl_10mb_small.pcap");
             // opts->trace = "cp_ul_10mb_small.pcap";
             /* if no nb runs is specified */
             if (i + 1 >= ac - 1)
@@ -311,7 +311,7 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             continue;
         } 
         else if (!strcmp(av[i], "--cp-dl-small-r")) {
-            strcat(opts->trace, "/cp_ul_1mb_small.pcap");
+            strcat(opts->trace, "/cp_dl_1mb_small.pcap");
             // opts->trace = "cp_ul_1mb_small.pcap";
             opts->r_active = 1;
             /* if no nb runs is specified */
@@ -581,6 +581,13 @@ int main(const int ac, char** av)
     opts.dst_mac = "a";
     opts.vlan = "a";
 
+    // clock_t start, end;
+    // double cpu_time_used;
+
+    struct timespec start, end;
+    long long elapsed_ns;
+    const long long one_sec_ns = 1000000000LL; // 1 second in nanoseconds
+
     time_t current_time;
     char* time_string;
 
@@ -666,24 +673,66 @@ int main(const int ac, char** av)
             return (ENOENT);
         }
          /* start tx threads and wait to start to send pkts */
-        clock_t last = clock();
+        
         while(1){
-            clock_t current = clock();
-            if (current >= (last + TIME_TO_WAIT * CLOCKS_PER_SEC)) {
-                current_time = time(NULL);
-                time_string = ctime(&current_time);
-                printf("The current time is: %s", time_string);
-                
-                ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
-              
-                if (ret)
-                    goto mainExit; 
-                last = current;
+            // if(opts.nbruns!=100){
+            // start = clock();
+            clock_gettime(CLOCK_REALTIME, &start);
+
+            current_time = time(NULL);
+            time_string = ctime(&current_time);
+            printf("The current time is: %s", time_string);
+
+            ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
+
+            clock_gettime(CLOCK_REALTIME, &end);
+
+            // end = clock();
+            // cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+            elapsed_ns = (end.tv_sec - start.tv_sec) * one_sec_ns + (end.tv_nsec - start.tv_nsec);
+            long long sleep_ns = one_sec_ns - elapsed_ns;
+            // printf("Time taken for process: %f seconds.\n", cpu_time_used);
+            // printf("Time taken: %ld nanoseconds\n", cpu_time_used);
+
+            if (sleep_ns > 0) {
+                struct timespec sleep_time = {0, sleep_ns};
+                nanosleep(&sleep_time, NULL);
             }
-            // ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
-            // if (ret)
-            //     goto mainExit;  
-        }     
+
+            // if(cpu_time_used<1){
+            //     sleep(1 - cpu_time_used);
+            // }
+            // }
+            // else{
+            //     printf("there");
+            //     current_time = time(NULL);
+            //     time_string = ctime(&current_time);
+            //     printf("The current time is: %s", time_string);
+            //     ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
+            // }
+            
+
+         }
+
+        // clock_t last = clock();
+
+        // while(1){
+        //     clock_t current = clock();
+        //     if (current >= (last + TIME_TO_WAIT * CLOCKS_PER_SEC)) {
+        //         current_time = time(NULL);
+        //         time_string = ctime(&current_time);
+        //         printf("The current time is: %s", time_string);
+
+        //         ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
+              
+        //         if (ret)
+        //             goto mainExit; 
+        //         last = current;
+        //     }
+        //     // ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
+        //     // if (ret)
+        //     //     goto mainExit;  
+        // }     
     }
     else if(opts.r_active){
         clock_t last = clock();
@@ -691,6 +740,8 @@ int main(const int ac, char** av)
             opts.nbruns = i;
             sent=0;
             while(1){
+
+                
                 clock_t current = clock();
                 if (current >= (last + TIME_TO_WAIT * CLOCKS_PER_SEC)) {
                     current_time = time(NULL);
@@ -698,6 +749,7 @@ int main(const int ac, char** av)
                     printf("The current time is: %s", time_string);
                     
                     ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
+                    
                     sent=1;
 
                     if (ret)
