@@ -9,10 +9,15 @@
 #include <stdint.h>
 #include <semaphore.h>
 
-#define MBUF_CACHE_SZ   32
+// #define MBUF_CACHE_SZ   32
+// #define TX_QUEUE_SIZE   4096
+// #define NB_TX_QUEUES    64 /* ^2 needed to make fast modulos % */
+
+#define MBUF_CACHE_SZ   128
 #define TX_QUEUE_SIZE   4096
 #define NB_TX_QUEUES    64 /* ^2 needed to make fast modulos % */
-#define BURST_SZ        128
+// #define BURST_SZ        128
+#define BURST_SZ        32
 #define NB_RETRY_TX     (NB_TX_QUEUES * 2)
 
 #define TX_PTHRESH 36 // Default value of TX prefetch threshold register.
@@ -52,6 +57,7 @@ struct cmd_opts {
     int             cont;
     int             range[3];
     int             r_active;
+    int             random_mac;
 };
 
 /* struct to store the cpus context */

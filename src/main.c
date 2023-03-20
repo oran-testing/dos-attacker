@@ -46,6 +46,7 @@ void usage(void)
          "--dst <MAC-ADDRESS>: change to desired destination MAC-ADDRESS.\n"
          "--src <MAC-ADDRESS>: change to desired source MAC-ADDRESS.\n"
          "--vlan <VLAN>: change to desired VLAN.\n"
+         "--rand : Randomize source MAC Address\n"
          "PCAP_FILE: if not stated, set the file to send through the DPDK ports by file name."
          /* TODO: */
          /* "[--maxbitrate bitrate]|[--normalspeed] : bitrate not to be exceeded (default: no limit) in ko/s.\n" */
@@ -429,6 +430,11 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             continue;
         }
 
+        if (!strcmp(av[i], "--rand")) {
+            opts->random_mac = 1;
+            continue;
+        }   
+
         /* --wait-enter */
         if (!strcmp(av[i], "--wait-enter")) {
             opts->wait = 1;
@@ -553,6 +559,8 @@ int main(const int ac, char** av)
     opts.src_mac = "a";
     opts.dst_mac = "a";
     opts.vlan = "a";
+    
+    srand(time(NULL));
 
     struct timespec start, end;
     long long elapsed_ns;
