@@ -283,7 +283,7 @@ int tx_thread(void* thread_ctx)
     struct rte_mbuf**   mbuf;
     struct timespec     start, end;
     unsigned int        tx_queue;
-    int                 ret, thread_id, index, i, run_cpt, retry_tx;
+    int                 ret, thread_id, index, i, run_cpt, retry_tx, j;
     int                 nb_sent, to_sent, total_to_sent, total_sent;
     int                 nb_drop;
 
@@ -324,17 +324,27 @@ int tx_thread(void* thread_ctx)
              total_to_sent -= to_sent, to_sent = min(BURST_SZ, total_to_sent)) {
             /* calculate the mbuf index for the current batch */
             index = ctx->nb_pkt - total_to_sent;
-
-            /* ferlinda's addition here */
             
-
-
-
             /* send the burst batch, and retry NB_RETRY_TX times if we */
             /* didn't success to sent all the wanted batch */
             for (total_sent = 0, retry_tx = NB_RETRY_TX;
                  total_sent < to_sent && retry_tx;
                  total_sent += nb_sent, retry_tx--) {
+
+                // Addition 03/21
+                if(ctx->random_mac){
+                    for (i = 0; i < to_sent; i++) {
+                        uint8_t new_mac[6];
+                        for (j = 0; j < 6; j++) {
+                            new_mac[j] = rand() % 256;
+                        }
+
+                        struct rte_mbuf *pkt = mbuf[index + total_sent + i];
+                        rte_memcpy((char*)pkt->buf_addr + 6, new_mac, 6);
+                    }
+                }
+                
+
                 nb_sent = rte_eth_tx_burst(ctx->tx_port_id,
                                            (tx_queue++ % NB_TX_QUEUES),
                                            &(mbuf[index + total_sent]),
@@ -439,6 +449,8 @@ int start_tx_threads(const struct cmd_opts* opts,
         ctx[i].pcap_cache = &(dpdk->pcap_caches[i]);
         ctx[i].nb_pkt = pcap->nb_pkts;
         ctx[i].nb_tx_queues = NB_TX_QUEUES;
+        // Addition 3/21
+        ctx[i].random_mac = opts->random_mac;
     }
 
     /* launch threads, which will wait on the semaphore to start */

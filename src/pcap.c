@@ -120,13 +120,13 @@ int add_pkt_to_cache(const struct dpdk_ctx* dpdk, const int cache_index,
     }
     
     // ADDITION 3/20
-    if(random_mac){
-        uint8_t new_mac[6];
-        for (i = 0; i < 6; i++) {
-            new_mac[i] = rand() % 256;
-        }
-        rte_memcpy((char*)m->buf_addr + 6, new_mac, 6);
-    }
+    // if(random_mac){
+    //     uint8_t new_mac[6];
+    //     for (i = 0; i < 6; i++) {
+    //         new_mac[i] = rand() % 256;
+    //     }
+    //     rte_memcpy((char*)m->buf_addr + 6, new_mac, 6);
+    // }
 
     /* set the refcnt to the wanted number of runs, avoiding to free
        mbuf struct on first tx burst */

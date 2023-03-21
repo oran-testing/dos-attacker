@@ -102,6 +102,8 @@ struct                  thread_ctx {
     unsigned int        total_drop;
     unsigned int        total_drop_sz;
     struct pcap_cache*  pcap_cache;
+    // Addition 3/21
+    int                 random_mac;
 };
 
 struct                  pcap_ctx {
