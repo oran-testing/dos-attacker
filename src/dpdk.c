@@ -286,6 +286,7 @@ int tx_thread(void* thread_ctx)
     int                 ret, thread_id, index, i, run_cpt, retry_tx, j;
     int                 nb_sent, to_sent, total_to_sent, total_sent;
     int                 nb_drop;
+    unsigned char seq_id = 0;
 
     if (!thread_ctx)
         return (EINVAL);
@@ -344,6 +345,22 @@ int tx_thread(void* thread_ctx)
                     }
                 }
                 
+                // Addition 04/17
+
+                
+                for (i = 0; i < to_sent; i++) {
+                    struct rte_mbuf *pkt = mbuf[index + total_sent + i];
+                    unsigned char* pkt_data = rte_pktmbuf_mtod(pkt, unsigned char*);
+                    //printf("seq_id: %02x\n", pkt_data[24]);
+     
+                    rte_memcpy((char*)pkt->buf_addr + 24, &seq_id, 1);
+		    seq_id++;
+                    //unsigned char* pkt_data = rte_pktmbuf_mtod(pkt, unsigned char*);
+                    //printf("seq_id: %0u\n", (unsigned int)pkt_data[24]);
+                }      
+		if (seq_id == 255){
+		  seq_id = 0;
+		}
 
                 nb_sent = rte_eth_tx_burst(ctx->tx_port_id,
                                            (tx_queue++ % NB_TX_QUEUES),

@@ -30,6 +30,7 @@ void usage(void)
          "Traffic-type <MBPS>:\n"
          "--cp-dl-big: traffic type C-plane Downlink single repetitive packet 1582 bytes each (10/100/1000 Mbps only)\n"
          "--cp-dl-small: traffic type C-plane Downlink single repetitive packet 64 bytes each (10/100/1000 Mbps only)\n"
+         "--cp-1gb-rand: traffic type C-plane Downlink single repetitive packet 64 bytes each (10/100/1000 Mbps only) with preloaded randomized MAC\n"
         "--cp-ul-big: traffic type C-plane Uplink (10/100/1000 Mbps only) single repetitive packet 1582 bytes each (10/100/1000 Mbps only)\n"
         "--cp-ul-small: traffic type C-plane Uplink (10/100/1000 Mbps only) single repetitive packet 64 bytes each (10/100/1000 Mbps only)\n"
          "--up-dl: traffic type U-plane Downlink (10/100/1000 Mbps only)\n"
@@ -148,8 +149,8 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
 
         /* ADDITION: change nbruns to volumetric tiers */
 
-        if (!strcmp(av[i], "--cp-dl-big")) {
-            strcat(opts->trace, "/cp_dl_10mb_big.pcap");
+        if (!strcmp(av[i], "--cp-dl-long")) {
+            strcat(opts->trace, "/cp_dl_long_10mb.pcap");
             // strcpy(opts->trace, "cp_dl_10mb_big.pcap");
             // opts->trace = "cp_dl_10mb_big.pcap";
             /* if no nb runs is specified */
@@ -174,8 +175,8 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             i++;
             continue;
         }
-        else if (!strcmp(av[i], "--cp-dl-small")) {
-            strcat(opts->trace, "/cp_dl_10mb_small.pcap");
+        else if (!strcmp(av[i], "--cp-dl-short")) {
+            strcat(opts->trace, "/cp_dl_short_10mb.pcap");
             // opts->trace = "cp_ul_10mb_small.pcap";
             /* if no nb runs is specified */
             if (i + 1 >= ac - 1)
@@ -197,8 +198,54 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             i++;
             continue;
         }
-        else if (!strcmp(av[i], "--cp-ul-big")) {
-            strcat(opts->trace, "/cp_ul_10mb_big.pcap");
+        else if (!strcmp(av[i], "--cp-type7")) {
+            strcat(opts->trace, "/type7.pcap");
+            // opts->trace = "cp_ul_10mb_small.pcap";
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            /* for each choosen volume */
+            if (!strcmp((av[i + 1]), "10")){
+                opts->nbruns = 1;
+            }
+            else if (!strcmp((av[i + 1]), "100")){
+                opts->nbruns = 10;
+            }
+            else if (!strcmp((av[i + 1]), "1000")){
+                opts->nbruns = 100;
+            }
+            /* else the value is wrong */
+            else{
+                return (EPROTO);
+            }
+            i++;
+            continue;
+        }
+        else if (!strcmp(av[i], "--cp-1gb-rand")) {
+            strcat(opts->trace, "/c_plane_64_rand.pcap");
+            // opts->trace = "cp_ul_10mb_small.pcap";
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            /* for each choosen volume */
+            if (!strcmp((av[i + 1]), "1000")){
+                opts->nbruns = 1;
+            }
+            else if (!strcmp((av[i + 1]), "100")){
+                opts->nbruns = 10;
+            }
+            else if (!strcmp((av[i + 1]), "10")){
+                opts->nbruns = 100;
+            }
+            /* else the value is wrong */
+            else{
+                return (EPROTO);
+            }
+            i++;
+            continue;
+        }
+        else if (!strcmp(av[i], "--cp-ul-long")) {
+            strcat(opts->trace, "/cp_ul_long_10mb.pcap");
             // opts->trace = "cp_ul_10mb_big.pcap";
             /* if no nb runs is specified */
             if (i + 1 >= ac - 1)
@@ -220,8 +267,8 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             i++;
             continue;
         }
-         else if (!strcmp(av[i], "--cp-ul-small")) {
-            strcat(opts->trace, "/cp_ul_10mb_small.pcap");
+         else if (!strcmp(av[i], "--cp-ul-short")) {
+            strcat(opts->trace, "/cp_ul_short_10mb.pcap");
             // opts->trace = "cp_ul_10mb_small.pcap";
             /* if no nb runs is specified */
             if (i + 1 >= ac - 1)
@@ -243,8 +290,8 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             i++;
             continue;
         }
-        else if (!strcmp(av[i], "--up-dl")) {
-            strcat(opts->trace, "/up_dl_10mb.pcap");
+        else if (!strcmp(av[i], "--up-dl-short")) {
+            strcat(opts->trace, "/up_dl_short_10mb.pcap");
             // opts->trace = "up_dl_10mb.pcap";
             /* if no nb runs is specified */
             if (i + 1 >= ac - 1)
@@ -268,8 +315,56 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             i++;
             continue;
         } 
-        else if (!strcmp(av[i], "--up-ul")) {
-            strcat(opts->trace, "/up_ul_10mb.pcap");
+        else if (!strcmp(av[i], "--up-ul-long")) {
+            strcat(opts->trace, "/up_ul_long_10mb.pcap");
+            // opts->trace = "up_ul_10mb.pcap";
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            /* for each choosen volume */
+            if (!strcmp((av[i + 1]), "10")){
+                opts->nbruns = 1;
+            }
+            else if (!strcmp((av[i + 1]), "100")){
+                opts->nbruns = 10;
+            }
+            else if (!strcmp((av[i + 1]), "1000")){
+                opts->nbruns = 100;
+            }
+            // Packet drop value = 120
+            /* else the value is wrong */
+            else{
+                return (EPROTO);
+            }
+            i++;
+            continue;
+        } 
+        else if (!strcmp(av[i], "--up-ul-short")) {
+            strcat(opts->trace, "/up_ul_short_10mb.pcap");
+            // opts->trace = "up_ul_10mb.pcap";
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            /* for each choosen volume */
+            if (!strcmp((av[i + 1]), "10")){
+                opts->nbruns = 1;
+            }
+            else if (!strcmp((av[i + 1]), "100")){
+                opts->nbruns = 10;
+            }
+            else if (!strcmp((av[i + 1]), "1000")){
+                opts->nbruns = 100;
+            }
+            // Packet drop value = 120
+            /* else the value is wrong */
+            else{
+                return (EPROTO);
+            }
+            i++;
+            continue;
+        } 
+        else if (!strcmp(av[i], "--debug")) {
+            strcat(opts->trace, "/temp.pcap");
             // opts->trace = "up_ul_10mb.pcap";
             /* if no nb runs is specified */
             if (i + 1 >= ac - 1)
@@ -293,9 +388,10 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             continue;
         } 
 
+
         /* ADDITION: range-based */
-        else if (!strcmp(av[i], "--cp-dl-big-r")) {
-            strcat(opts->trace, "/cp_dl_1mb_big.pcap");
+        else if (!strcmp(av[i], "--cp-dl-long-r")) {
+            strcat(opts->trace, "/cp_dl_long_1mb.pcap");
             // opts->trace = "cp_dl_1mb_big.pcap";
             opts->r_active = 1;
             /* if no nb runs is specified */
@@ -311,8 +407,8 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             i++;
             continue;
         } 
-        else if (!strcmp(av[i], "--cp-dl-small-r")) {
-            strcat(opts->trace, "/cp_dl_1mb_small.pcap");
+        else if (!strcmp(av[i], "--cp-dl-short-r")) {
+            strcat(opts->trace, "/cp_dl_short_1mb.pcap");
             // opts->trace = "cp_ul_1mb_small.pcap";
             opts->r_active = 1;
             /* if no nb runs is specified */
@@ -328,8 +424,8 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             i++;
             continue;
         }
-        else if (!strcmp(av[i], "--cp-ul-big-r")) {
-            strcat(opts->trace, "/cp_ul_1mb_big.pcap");
+        else if (!strcmp(av[i], "--cp-ul-long-r")) {
+            strcat(opts->trace, "/cp_ul_long_1mb.pcap");
             // opts->trace = "cp_ul_1mb_big.pcap";
             opts->r_active = 1;
             /* if no nb runs is specified */
@@ -345,8 +441,8 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             i++;
             continue;
         }
-         else if (!strcmp(av[i], "--cp-ul-small-r")) {
-            strcat(opts->trace, "/cp_ul_1mb_small.pcap");
+         else if (!strcmp(av[i], "--cp-ul-short-r")) {
+            strcat(opts->trace, "/cp_ul_short_1mb.pcap");
             // opts->trace = "cp_ul_1mb_small.pcap";
             opts->r_active = 1;
             /* if no nb runs is specified */
@@ -362,8 +458,8 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             i++;
             continue;
         }
-        else if (!strcmp(av[i], "--up-dl-r")) {
-            strcat(opts->trace, "/up_dl_1mb.pcap");
+        else if (!strcmp(av[i], "--up-dl-short-r")) {
+            strcat(opts->trace, "/up_dl_short_1mb.pcap");
             // opts->trace = "up_dl_1mb.pcap";
             opts->r_active = 1;
             /* if no nb runs is specified */
@@ -379,8 +475,25 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             i++;
             continue;
         } 
-        else if (!strcmp(av[i], "--up-ul-r")) {
-            strcat(opts->trace, "/up_ul_1mb.pcap");
+        else if (!strcmp(av[i], "--up-ul-long-r")) {
+            strcat(opts->trace, "/up_ul_long_1mb.pcap");
+            // opts->trace = "up_ul_1mb.pcap";
+            opts->r_active = 1;
+            /* if no nb runs is specified */
+            if (i + 1 >= ac - 1)
+                return (ENOENT);
+            char* token = strtok((av[i + 1]), ",");
+            int j = 0;
+            while (token != NULL && j < 3) {
+                opts->range[j] = atoi(token);
+                token = strtok(NULL, ",");
+                j++;
+            }
+            i++;
+            continue;
+        } 
+        else if (!strcmp(av[i], "--up-ul-short-r")) {
+            strcat(opts->trace, "/up_ul_short_1mb.pcap");
             // opts->trace = "up_ul_1mb.pcap";
             opts->r_active = 1;
             /* if no nb runs is specified */
@@ -435,6 +548,11 @@ int parse_options(const int ac, char** av, struct cmd_opts* opts)
             continue;
         }   
 
+        if (!strcmp(av[i], "--seq")) {
+            opts->seq_active = 1;
+            continue;
+        }   
+        
         /* --wait-enter */
         if (!strcmp(av[i], "--wait-enter")) {
             opts->wait = 1;
@@ -490,7 +608,7 @@ int check_needed_memory(const struct cmd_opts* opts, const struct pcap_ctx* pcap
            sizeof(struct rte_mbuf), pcap->max_pkt_sz,
            sizeof(int), dpdk->mbuf_sz);
 #endif /* DEBUG */
-    printf("-> Needed MBUF size: %lu\n", dpdk->mbuf_sz);
+    //printf("-> Needed MBUF size: %lu\n", dpdk->mbuf_sz);
 
     /* # CALCULATE THE NEEDED NUMBER OF MBUFS */
 #ifdef DPDK_RECOMMANDATIONS
@@ -516,7 +634,7 @@ int check_needed_memory(const struct cmd_opts* opts, const struct pcap_ctx* pcap
     */
     if (dpdk->nb_mbuf < (MBUF_CACHE_SZ * 2))
         dpdk->nb_mbuf = MBUF_CACHE_SZ * 4;
-    printf("-> Needed number of MBUFS: %lu\n", dpdk->nb_mbuf);
+    //printf("-> Needed number of MBUFS: %lu\n", dpdk->nb_mbuf);
 
     /* # CALCULATE THE TOTAL NEEDED MEMORY SIZE  */
     needed_mem = dpdk->mbuf_sz * dpdk->nb_mbuf;
@@ -527,7 +645,7 @@ int check_needed_memory(const struct cmd_opts* opts, const struct pcap_ctx* pcap
     hsize = nb_oct_to_human_str(needed_mem);
     if (!hsize)
         return (-1);
-    printf("-> Needed Memory = %s\n", hsize);
+    //printf("-> Needed Memory = %s\n", hsize);
     free(hsize);
 
     /* # CALCULATE THE NEEDED NUMBER OF GIGABYTE HUGEPAGES */
@@ -535,7 +653,7 @@ int check_needed_memory(const struct cmd_opts* opts, const struct pcap_ctx* pcap
         dpdk->pool_sz = needed_mem / (float)(1024*1024*1024) + 1;
     else
         dpdk->pool_sz = needed_mem / (1024*1024*1024);
-    printf("-> Needed Hugepages of 1 Go = %lu\n", dpdk->pool_sz);
+    //printf("-> Needed Hugepages of 1 Go = %lu\n", dpdk->pool_sz);
     return (0);
 }
 
@@ -673,7 +791,7 @@ int main(const int ac, char** av)
 
                 current_time = time(NULL);
                 time_string = ctime(&current_time);
-                printf("The current time is: %s", time_string);
+                // printf("------------------------------------- The current time is: %s", time_string);
 
                 ret = start_tx_threads(&opts, &cpus, &dpdk, &pcap);
 

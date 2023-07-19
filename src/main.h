@@ -58,6 +58,8 @@ struct cmd_opts {
     int             range[3];
     int             r_active;
     int             random_mac;
+    // Addition 04/17
+    int 	    seq_active;
 };
 
 /* struct to store the cpus context */
@@ -104,6 +106,7 @@ struct                  thread_ctx {
     struct pcap_cache*  pcap_cache;
     // Addition 3/21
     int                 random_mac;
+    int 		seq_active;
 };
 
 struct                  pcap_ctx {
