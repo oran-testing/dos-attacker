@@ -17,14 +17,14 @@ There are two parts of contribution for the packet editor:
 
 #### Adding dissector to Scapy
 
-> cp /Traffic/oran_fh.py [Scapy directory]/layers/
+> cp /python_code/oran_fh.py [Scapy directory]/layers/
 
 After opening Scapy:
 > load_layer("oran_fh")
 
 #### Generate PCAP Generator binary 
 
-> pyinstaller /Traffic/pcap_gen.py --onefile --hiddenimport scapy
+> pyinstaller /python_code/pcap_gen.py --onefile --hiddenimport scapy
 > sudo cp dist/pcap_gen /usr/bin
 
 #### Launching it
