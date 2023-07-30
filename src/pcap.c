@@ -130,8 +130,8 @@ int add_pkt_to_cache(const struct dpdk_ctx* dpdk, const int cache_index,
 
     /* set the refcnt to the wanted number of runs, avoiding to free
        mbuf struct on first tx burst */
+    //rte_mbuf_refcnt_set(m, nbruns);
     rte_mbuf_refcnt_set(m, nbruns);
-
     /* check that the crafted packet is valid */
     rte_mbuf_sanity_check(m, 1);
 
@@ -278,7 +278,7 @@ int load_pcap(const struct cmd_opts* opts, struct pcap_ctx* pcap,
     if (ret)
         goto load_pcapError;
 
-    printf("-> Will cache %i pkts on %i caches.\n", pcap->nb_pkts, cpus->nb_needed_cpus);
+    //printf("-> Will cache %i pkts on %i caches.\n", pcap->nb_pkts, cpus->nb_needed_cpus);
     for (; cpt < pcap->nb_pkts; cpt++) {
         /* get packet pcap header */
         nb_read = read(pcap->fd, &pcap_rechdr, sizeof(pcap_rechdr));

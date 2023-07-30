@@ -210,8 +210,8 @@ int init_dpdk_eal_mempool(const struct cmd_opts* opts,
         return (1);
     }
 
-    printf("-> Create mempool of %lu mbufs of %lu octs.\n",
-           dpdk->nb_mbuf, dpdk->mbuf_sz);
+    //printf("-> Create mempool of %lu mbufs of %lu octs.\n",
+    //       dpdk->nb_mbuf, dpdk->mbuf_sz);
     dpdk->pktmbuf_pool = rte_mempool_create("cufh_attacker_mempool",
                                             dpdk->nb_mbuf,
                                             dpdk->mbuf_sz,
@@ -347,19 +347,20 @@ int tx_thread(void* thread_ctx)
                 
                 // Addition 04/17
 
-                
-                for (i = 0; i < to_sent; i++) {
-                    struct rte_mbuf *pkt = mbuf[index + total_sent + i];
-                    unsigned char* pkt_data = rte_pktmbuf_mtod(pkt, unsigned char*);
-                    //printf("seq_id: %02x\n", pkt_data[24]);
-     
-                    rte_memcpy((char*)pkt->buf_addr + 24, &seq_id, 1);
-		    seq_id++;
-                    //unsigned char* pkt_data = rte_pktmbuf_mtod(pkt, unsigned char*);
-                    //printf("seq_id: %0u\n", (unsigned int)pkt_data[24]);
-                }      
-		if (seq_id == 255){
-		  seq_id = 0;
+                if(ctx->seq_active){
+		  for (i = 0; i < to_sent; i++) {
+		      struct rte_mbuf *pkt = mbuf[index + total_sent + i];
+		      unsigned char* pkt_data = rte_pktmbuf_mtod(pkt, unsigned char*);
+		      //printf("seq_id: %02x\n", pkt_data[24]);
+      
+		      rte_memcpy((char*)pkt->buf_addr + 24, &seq_id, 1);
+		      seq_id++;
+		      //unsigned char* pkt_data = rte_pktmbuf_mtod(pkt, unsigned char*);
+		      //printf("seq_id: %0u\n", (unsigned int)pkt_data[24]);
+		  }      
+		  if (seq_id == 255){
+		    seq_id = 0;
+		  }
 		}
 
                 nb_sent = rte_eth_tx_burst(ctx->tx_port_id,
@@ -402,12 +403,14 @@ int tx_thread(void* thread_ctx)
 int process_result_stats(const struct cpus_bindings* cpus,
                          const struct dpdk_ctx* dpdk,
                          const struct cmd_opts* opts,
-                         const struct thread_ctx* ctx)
+                         const struct thread_ctx* ctx,
+			 const struct pcap_ctx* pcap
+			)
 {
     double              pps, bitrate;
     double              total_pps, total_bitrate;
     unsigned long int   total_pkt_sent, total_pkt_sent_sz;
-    unsigned int        i, total_drop, total_pkt;
+    unsigned int        i, total_drop, total_pkt, bitrate_sent;
 
     if (!cpus || !dpdk || !opts || !ctx)
         return (EINVAL);
@@ -427,14 +430,19 @@ int process_result_stats(const struct cpus_bindings* cpus,
         total_bitrate += bitrate;
         total_pps += pps;
         total_drop += ctx[i].total_drop;
-        printf("[thread %02u]: %f Gbit/s, %f pps on %f sec (%u pkts dropped)\n",
-               i, bitrate, pps, ctx[i].duration, ctx[i].total_drop);
+        // printf("[thread %02u]: %f Gbit/s, %f pps on %f sec (%u pkts dropped)\n",
+        //        i, bitrate, pps, ctx[i].duration, ctx[i].total_drop);
     }
     puts("-----");
-    printf("TOTAL        : %.3f Gbit/s. %.3f pps.\n", total_bitrate, total_pps);
+    //printf("TOTAL        : %.3f Gbit/s. %.3f pps.\n", total_bitrate, total_pps);
     total_pkt = ctx[0].nb_pkt * opts->nbruns * cpus->nb_needed_cpus;
-    printf("Total dropped: %u/%u packets (%f%%)\n", total_drop, total_pkt,
-           (double)(total_drop * 100) / (double)(total_pkt));
+    printf("Total sent: %u packets (%.2f%%)\n", total_pkt,
+           ((double)(100)-((double)(total_drop * 100) / (double)(total_pkt))));
+    bitrate_sent = pcap->max_pkt_sz * 8 * (total_pkt-total_drop);
+    //bitrate_sent = pcap->max_pkt_sz ;
+    printf("Bitrate: %.2f Mbits per second\n", (double)(bitrate_sent/1000000));
+    //printf("Bitrate: %u Mbits per second\n", bitrate_sent);
+    
     return (0);
 }
 
@@ -468,6 +476,8 @@ int start_tx_threads(const struct cmd_opts* opts,
         ctx[i].nb_tx_queues = NB_TX_QUEUES;
         // Addition 3/21
         ctx[i].random_mac = opts->random_mac;
+	ctx[i].seq_active = opts->seq_active;
+	
     }
 
     /* launch threads, which will wait on the semaphore to start */
@@ -504,7 +514,7 @@ int start_tx_threads(const struct cmd_opts* opts,
     rte_eal_mp_wait_lcore();
 
     /* get results */
-    ret = process_result_stats(cpus, dpdk, opts, ctx);
+    ret = process_result_stats(cpus, dpdk, opts, ctx, pcap);
     free(ctx);
     return (ret);
 }

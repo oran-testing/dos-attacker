@@ -91,7 +91,7 @@ int init_cpus(const struct cmd_opts* opts, struct cpus_bindings* cpus)
     /* calculate the number of needed cpu cores */
     for (i = 0; opts->pcicards[i]; i++);
     cpus->nb_needed_cpus = i;
-    printf("-> Needed cpus: %i\n", cpus->nb_needed_cpus);
+    //printf("-> Needed cpus: %i\n", cpus->nb_needed_cpus);
 
     /* lookup on cores ID to use */
     ret = find_cpus_to_use(opts, cpus);
